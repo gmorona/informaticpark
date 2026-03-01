@@ -1,0 +1,13 @@
+
+> frontend@0.1.0 dev
+> next dev -p 3006
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3006
+- Network:       http://192.168.56.1:3006
+- Environments: .env
+
+Γ£ô Starting...
+Γ¿» Unable to acquire lock at C:\Users\kv\Documents\projects\programming\infopark\frontend\.next\dev\lock, is another instance of next dev running?
+  Suggestion: If you intended to restart next dev, terminate the other process, and then try again.
+[?25h
