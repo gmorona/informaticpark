@@ -10,14 +10,37 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   // Ensure endpoint doesn't double slash or miss slash
   const url = `${API_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  let response: Response;
+  try {
+    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+    if (isHttps && BACKEND_URL.startsWith("http://")) {
+      throw new Error(`Conexión bloqueada por contenido mixto: frontend en HTTPS y backend en HTTP (${BACKEND_URL})`);
+    }
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
+      mode: "cors",
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeout);
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const msg = err?.message || "";
+    if (msg.includes("Failed to fetch") || err?.name === "AbortError" || msg.includes("NetworkError")) {
+      throw new Error(
+        `No se pudo conectar con el backend en ${BACKEND_URL}. Verifica que el servidor esté encendido y que CORS permita el origen ${origin}. Detalles: ${msg}`
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     if (response.status === 401 && typeof window !== "undefined" && !url.includes("/auth/login")) {

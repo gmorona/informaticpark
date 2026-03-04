@@ -18,7 +18,8 @@ export class AssetsService {
       if (createdByUserId) {
         data.createdByUserId = createdByUserId;
       }
-      return this.prisma.asset.create({ data });
+      const asset = await this.prisma.asset.create({ data });
+      return this.formatAsset(asset);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -32,13 +33,14 @@ export class AssetsService {
   }
 
   async findAll() {
-    return this.prisma.asset.findMany({
+    const assets = await this.prisma.asset.findMany({
       include: {
         custodian: true,
         createdByUser: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
+    return assets.map((asset) => this.formatAsset(asset));
   }
 
   async findOne(id: number) {
@@ -52,14 +54,14 @@ export class AssetsService {
     if (!asset) {
       throw new NotFoundException(`Activo con id ${id} no encontrado`);
     }
-    return asset;
+    return this.formatAsset(asset);
   }
 
   async update(id: number, dto: UpdateAssetDto) {
     await this.findOne(id);
     try {
       const data = this.toPrismaData(dto) as any;
-      return this.prisma.asset.update({
+      const asset = await this.prisma.asset.update({
         where: { id },
         data,
         include: {
@@ -67,6 +69,7 @@ export class AssetsService {
           createdByUser: { select: { id: true, name: true, email: true } },
         },
       });
+      return this.formatAsset(asset);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -84,6 +87,14 @@ export class AssetsService {
     return this.prisma.asset.delete({
       where: { id },
     });
+  }
+
+  private formatAsset(asset: any) {
+    return {
+      ...asset,
+      initialValue: asset.initialValue ? parseFloat(asset.initialValue) : null,
+      currentValue: asset.currentValue ? parseFloat(asset.currentValue) : null,
+    };
   }
 
   private toPrismaData(dto: CreateAssetDto | UpdateAssetDto) {

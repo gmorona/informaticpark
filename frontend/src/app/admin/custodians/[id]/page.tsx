@@ -1,6 +1,7 @@
 import { CustodianForm } from "../custodian-form";
 
-export default function EditCustodianPage({ params }: { params: { id: string } }) {
-  const custodianId = parseInt(params.id);
+export default async function EditCustodianPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const custodianId = parseInt(id);
   return <CustodianForm custodianId={custodianId} />;
 }
