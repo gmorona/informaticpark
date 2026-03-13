@@ -1,85 +1,209 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Informaticpark — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST construida con **NestJS 11 + Prisma + PostgreSQL**. Corre en el puerto `4000`. Todas las rutas están prefijadas con `/api`. Documentación Swagger disponible en `/api/docs`.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Requisitos
 
-## Description
+- Node.js >= 18
+- PostgreSQL
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Configuración
 
-## Project setup
+Crea un archivo `.env` en la raíz del proyecto:
 
-```bash
-$ npm install
+```env
+DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/informaticpark"
+JWT_SECRET="tu_secreto_jwt"
+JWT_EXPIRES_IN="1h"
 ```
 
-## Compile and run the project
+## Instalación y ejecución
 
 ```bash
-# development
-$ npm run start
+# Instalar dependencias
+npm install
 
-# watch mode
-$ npm run start:dev
+# Ejecutar migraciones
+npm run prisma:migrate
 
-# production mode
-$ npm run start:prod
+# Poblar con datos iniciales (admin@example.com / Admin123!)
+npm run prisma:seed
+
+# Desarrollo con hot reload (puerto 4000)
+npm run start:dev
+
+# Producción
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+## Comandos disponibles
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:dev       # Desarrollo con hot reload
+npm run start:debug     # Desarrollo con debugger
+npm run build           # Compila TypeScript + genera cliente Prisma
+npm run lint            # ESLint con auto-fix
+npm run format          # Prettier
+npm run test            # Tests unitarios
+npm run test:e2e        # Tests end-to-end
+npm run test:cov        # Cobertura de tests
+npm run prisma:migrate  # Ejecutar migraciones
+npm run prisma:seed     # Poblar base de datos
+npm run prisma:generate # Regenerar cliente Prisma
 ```
 
-## Resources
+## Autenticación
 
-Check out a few resources that may come in handy when working with NestJS:
+1. `POST /api/auth/login` — devuelve un JWT
+2. Todas las demás rutas requieren `Authorization: Bearer <token>`
+3. Las rutas de administrador requieren rol `ADMIN`
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Esquema de base de datos
 
-## Support
+### MER
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```mermaid
+erDiagram
+    User {
+        Int     id              PK
+        String  name
+        String  email           "unique"
+        String  password
+        Role    role            "ADMIN | USER"
+        Boolean isActive
+        DateTime createdAt
+        DateTime updatedAt
+    }
 
-## Stay in touch
+    Location {
+        Int     id              PK
+        String  canton
+        String  parroquia
+        Float   lat
+        Float   lng
+        DateTime createdAt
+        DateTime updatedAt
+    }
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+    Custodian {
+        Int     id              PK
+        String  fullName
+        String  identifier      "unique"
+        String  unit
+        Int     locationId      FK
+        DateTime createdAt
+        DateTime updatedAt
+    }
 
-## License
+    Asset {
+        Int      id               PK
+        String   code             "unique"
+        String   previousCode
+        String   assetName
+        String   brand
+        String   model
+        String   serialNumber
+        String   location
+        String   physicalLocation
+        DateTime entryDate
+        DateTime activationDate
+        String   accountCode
+        Decimal  initialValue     "12,2"
+        Decimal  currentValue     "12,2"
+        String   note
+        Int      custodianId      FK
+        Int      createdByUserId  FK
+        Int      locationId       FK
+        DateTime createdAt
+        DateTime updatedAt
+    }
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+    User        ||--o{ Asset      : "registra"
+    Custodian   ||--o{ Asset      : "custodia"
+    Location    ||--o{ Asset      : "ubica"
+    Location    ||--o{ Custodian  : "ubica"
+```
+
+### Modelos
+
+#### `User`
+
+| Campo       | Tipo       | Descripción                              |
+|-------------|------------|------------------------------------------|
+| `id`        | `Int` PK   | Autoincremental                          |
+| `name`      | `String`   | Nombre completo                          |
+| `email`     | `String`   | Único                                    |
+| `password`  | `String`   | Hash bcrypt                              |
+| `role`      | `Role`     | `ADMIN` o `USER` (default: `USER`)       |
+| `isActive`  | `Boolean`  | Soft delete (default: `true`)            |
+| `createdAt` | `DateTime` |                                          |
+| `updatedAt` | `DateTime` |                                          |
+
+#### `Location`
+
+| Campo       | Tipo       | Descripción                          |
+|-------------|------------|--------------------------------------|
+| `id`        | `Int` PK   | Autoincremental                      |
+| `canton`    | `String?`  | Cantón                               |
+| `parroquia` | `String?`  | Parroquia                            |
+| `lat`       | `Float?`   | Latitud                              |
+| `lng`       | `Float?`   | Longitud                             |
+| `createdAt` | `DateTime` |                                      |
+| `updatedAt` | `DateTime` |                                      |
+
+Relaciones: tiene muchos `Asset` y muchos `Custodian`.
+
+#### `Custodian`
+
+| Campo        | Tipo       | Descripción                          |
+|--------------|------------|--------------------------------------|
+| `id`         | `Int` PK   | Autoincremental                      |
+| `fullName`   | `String`   | Nombre completo                      |
+| `identifier` | `String`   | Identificador único (cédula/código)  |
+| `unit`       | `String?`  | Unidad o departamento                |
+| `locationId` | `Int?` FK  | Referencia a `Location`              |
+| `createdAt`  | `DateTime` |                                      |
+| `updatedAt`  | `DateTime` |                                      |
+
+Relaciones: pertenece a una `Location` (opcional, `SetNull` al borrar); tiene muchos `Asset`.
+
+#### `Asset`
+
+| Campo             | Tipo          | Descripción                                   |
+|-------------------|---------------|-----------------------------------------------|
+| `id`              | `Int` PK      | Autoincremental                               |
+| `code`            | `String?`     | Código único del activo                       |
+| `previousCode`    | `String?`     | Código anterior                               |
+| `assetName`       | `String`      | Nombre del bien                               |
+| `brand`           | `String?`     | Marca                                         |
+| `model`           | `String?`     | Modelo                                        |
+| `serialNumber`    | `String?`     | Número de serie                               |
+| `location`        | `String?`     | Ubicación textual                             |
+| `physicalLocation`| `String?`     | Ubicación física detallada                    |
+| `entryDate`       | `DateTime?`   | Fecha de ingreso                              |
+| `activationDate`  | `DateTime?`   | Fecha de activación                           |
+| `accountCode`     | `String?`     | Código contable                               |
+| `initialValue`    | `Decimal?`    | Valor inicial (12,2)                          |
+| `currentValue`    | `Decimal?`    | Valor actual (12,2)                           |
+| `note`            | `String?`     | Observaciones                                 |
+| `custodianId`     | `Int?` FK     | Referencia a `Custodian`                      |
+| `createdByUserId` | `Int?` FK     | Usuario que registró el activo                |
+| `locationId`      | `Int?` FK     | Referencia a `Location` (`SetNull` al borrar) |
+| `createdAt`       | `DateTime`    |                                               |
+| `updatedAt`       | `DateTime`    |                                               |
+
+### Enum `Role`
+
+| Valor   | Descripción              |
+|---------|--------------------------|
+| `ADMIN` | Acceso completo          |
+| `USER`  | Acceso solo a activos    |
+
+## Variables de entorno
+
+| Variable        | Default                | Descripción                  |
+|-----------------|------------------------|------------------------------|
+| `DATABASE_URL`  | —                      | Cadena de conexión PostgreSQL |
+| `JWT_SECRET`    | `changeme_jwt_secret`  | Clave de firma JWT           |
+| `JWT_EXPIRES_IN`| `1h`                   | TTL del token                |
