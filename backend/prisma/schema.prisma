@@ -25,6 +25,19 @@ model User {
   assetsCreated Asset[]
 }
 
+model Location {
+  id        Int      @id @default(autoincrement())
+  canton    String?
+  parroquia String?
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assets     Asset[]
+  custodians Custodian[]
+}
+
 model Custodian {
   id         Int      @id @default(autoincrement())
   fullName   String
@@ -32,6 +45,9 @@ model Custodian {
   unit       String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  locationId Int?
+  geoLocation Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   assets     Asset[]
 }
@@ -58,6 +74,9 @@ model Asset {
 
   createdByUserId  Int?
   createdByUser    User?       @relation(fields: [createdByUserId], references: [id])
+
+  locationId       Int?
+  geoLocation      Location?  @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt

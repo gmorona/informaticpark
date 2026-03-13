@@ -10,6 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(
+  () => import("@/components/location-picker").then((m) => m.LocationPicker),
+  { ssr: false, loading: () => <div className="h-[320px] rounded-md border border-input flex items-center justify-center text-muted-foreground text-sm">Cargando mapa...</div> }
+);
 
 interface AssetFormProps {
   assetId?: number;
@@ -36,6 +42,7 @@ export function AssetForm({ assetId }: AssetFormProps) {
     note: "",
     custodianId: "",
   });
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     loadCustodians();
@@ -71,6 +78,10 @@ export function AssetForm({ assetId }: AssetFormProps) {
         note: asset.note || "",
         custodianId: asset.custodianId?.toString() || "",
       });
+      if (asset.coordinates) {
+        const [lat, lng] = asset.coordinates.split(",").map(Number);
+        if (!isNaN(lat) && !isNaN(lng)) setCoordinates({ lat, lng });
+      }
     } catch (error) {
       console.error("Error loading asset:", error);
     } finally {
@@ -87,6 +98,7 @@ export function AssetForm({ assetId }: AssetFormProps) {
         custodianId: formData.custodianId ? parseInt(formData.custodianId) : null,
         initialValue: parseFloat(formData.initialValue.toString()),
         currentValue: parseFloat(formData.currentValue.toString()),
+        coordinates: coordinates ? `${coordinates.lat},${coordinates.lng}` : null,
       };
       if (isEdit) {
         await api.assets.update(assetId!, data);
@@ -118,11 +130,19 @@ export function AssetForm({ assetId }: AssetFormProps) {
       </div>
 
       <Card>
+        
         <CardHeader>
           <CardTitle>Información del Activo</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid gap-2">
+              <Label>Coordenadas de Ubicación</Label>
+              <LocationPicker value={coordinates} onChange={setCoordinates} />
+              {coordinates && (
+                <input type="hidden" name="coordinates" value={`${coordinates.lat},${coordinates.lng}`} />
+              )}
+        </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="assetName">Nombre del Activo</Label>
@@ -219,6 +239,8 @@ export function AssetForm({ assetId }: AssetFormProps) {
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               />
             </div>
+            
+
             <Button type="submit" className="w-full" disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Guardando..." : "Guardar Activo"}

@@ -40,6 +40,7 @@ export interface Asset {
   initialValue?: number | null;
   currentValue?: number | null;
   note?: string | null;
+  coordinates?: string | null;
   custodianId?: number | null;
   custodian?: Custodian | null;
   createdByUserId?: number | null;

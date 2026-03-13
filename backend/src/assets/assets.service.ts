@@ -37,6 +37,7 @@ export class AssetsService {
       include: {
         custodian: true,
         createdByUser: { select: { id: true, name: true, email: true } },
+        geoLocation: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -49,6 +50,7 @@ export class AssetsService {
       include: {
         custodian: true,
         createdByUser: { select: { id: true, name: true, email: true } },
+        geoLocation: true,
       },
     });
     if (!asset) {
@@ -111,6 +113,7 @@ export class AssetsService {
       'accountCode',
       'note',
       'custodianId',
+      'locationId',
     ] as const;
     for (const f of fields) {
       const v = (dto as Record<string, unknown>)[f];

@@ -15,7 +15,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold text-xl">
           <LayoutDashboard className="w-6 h-6 text-primary" />
-          <span>Infopark Admin</span>
+          <span>Parque Informatico</span>
         </Link>
 
         <div className="flex items-center gap-4">

@@ -19,7 +19,9 @@ export class CustodiansService {
           fullName: dto.fullName,
           identifier: dto.identifier,
           unit: dto.unit,
+          ...(dto.locationId !== undefined ? { locationId: dto.locationId } : {}),
         },
+        include: { geoLocation: true, assets: true },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -37,6 +39,7 @@ export class CustodiansService {
     return this.prisma.custodian.findMany({
       include: {
         assets: true,
+        geoLocation: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -47,6 +50,7 @@ export class CustodiansService {
       where: { id },
       include: {
         assets: true,
+        geoLocation: true,
       },
     });
     if (!custodian) {
@@ -64,6 +68,7 @@ export class CustodiansService {
           ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
           ...(dto.identifier !== undefined ? { identifier: dto.identifier } : {}),
           ...(dto.unit !== undefined ? { unit: dto.unit } : {}),
+          ...(dto.locationId !== undefined ? { locationId: dto.locationId } : {}),
         },
         include: {
           assets: true,

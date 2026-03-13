@@ -12,8 +12,8 @@ const fontSans = FontSans({
 });
 
 export const metadata: Metadata = {
-  title: "Infopark Admin",
-  description: "Sistema de gestión de activos",
+  title: "Parque Informatico GPMS",
+  description: "Aplicativo para la localizacion de equipos infomaticos",
 };
 
 export default function RootLayout({

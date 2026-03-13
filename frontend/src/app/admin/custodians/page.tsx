@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Pencil, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function CustodiansAdminPage() {
+  const router = useRouter();
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,11 +102,15 @@ export default function CustodiansAdminPage() {
                 </TableRow>
               ) : (
                 custodians.map((c) => (
-                  <TableRow key={c.id}>
+                  <TableRow
+                    key={c.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/admin/custodians/${c.id}/assets`)}
+                  >
                     <TableCell className="font-medium">{c.fullName}</TableCell>
                     <TableCell>{c.identifier}</TableCell>
                     <TableCell>{c.unit || "N/A"}</TableCell>
-                    <TableCell className="text-right space-x-2">
+                    <TableCell className="text-right space-x-2" onClick={(e) => e.stopPropagation()}>
                       <Link href={`/admin/custodians/${c.id}`}>
                         <Button variant="ghost" size="icon">
                           <Pencil className="w-4 h-4" />

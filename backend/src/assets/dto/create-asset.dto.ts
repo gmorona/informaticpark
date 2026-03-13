@@ -123,4 +123,10 @@ export class CreateAssetDto {
   @IsInt()
   @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   custodianId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
+  locationId?: number;
 }
