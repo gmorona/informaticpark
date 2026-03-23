@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Asset, Custodian } from "@/lib/types";
+import { Asset, Custodian, Location } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,39 @@ const LocationPicker = dynamic(
   { ssr: false, loading: () => <div className="h-[320px] rounded-md border border-input flex items-center justify-center text-muted-foreground text-sm">Cargando mapa...</div> }
 );
 
+const MORONA_SANTIAGO: Record<string, string[]> = {
+  "Morona": [
+    "Macas", "Alshi", "General Proaño", "Huambi", "Proaño",
+    "Río Blanco", "San Isidro", "Sevilla Don Bosco", "Sinaí", "Zuñac",
+  ],
+  "Gualaquiza": [
+    "Gualaquiza", "Amazonas", "Bomboiza", "Chiguinda",
+    "El Ideal", "El Rosario", "Nueva Tarqui",
+  ],
+  "Huamboya": ["Huamboya", "Chiguaza"],
+  "Limón Indanza": [
+    "General Leonidas Plaza Gutiérrez", "Indanza", "San Antonio",
+    "San Miguel de Conchay", "Santa Susana de Chiviaza", "Yunganza",
+  ],
+  "Logroño": ["Logroño", "Nambija", "Shimpis"],
+  "Pablo Sexto": ["Pablo Sexto"],
+  "Palora": ["Palora", "Arapicos", "Cumandá", "Guiaza", "Sangay"],
+  "San Juan Bosco": [
+    "San Juan Bosco", "El Rosario", "Pan de Azúcar",
+    "San Jacinto de Wakambeis", "Santiago de Pananza",
+  ],
+  "Santiago": [
+    "Santiago de Méndez", "Copal", "Chupianza",
+    "Patuca", "San Luis del Acho", "Tayuza",
+  ],
+  "Sucúa": ["Sucúa", "Asunción", "Huambi", "Santa Marianita de Jesús"],
+  "Taisha": ["Taisha", "Huasaga", "Macuma", "Pumpuentsa", "Tuutinentza"],
+  "Tiwintza": ["San José de Morona", "Santiago"],
+};
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
 interface AssetFormProps {
   assetId?: number;
 }
@@ -27,6 +60,7 @@ export function AssetForm({ assetId }: AssetFormProps) {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [formData, setFormData] = useState({
     code: "",
     previousCode: "",
@@ -41,11 +75,14 @@ export function AssetForm({ assetId }: AssetFormProps) {
     currentValue: 0,
     note: "",
     custodianId: "",
+    canton: "",
+    parroquia: "",
   });
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     loadCustodians();
+    loadLocations();
     if (isEdit) {
       loadAsset();
     }
@@ -57,6 +94,15 @@ export function AssetForm({ assetId }: AssetFormProps) {
       setCustodians(data);
     } catch (error) {
       console.error("Error loading custodians:", error);
+    }
+  }
+
+  async function loadLocations() {
+    try {
+      const data = await api.locations.getAll();
+      setLocations(data);
+    } catch (error) {
+      console.error("Error loading locations:", error);
     }
   }
 
@@ -77,10 +123,11 @@ export function AssetForm({ assetId }: AssetFormProps) {
         currentValue: asset.currentValue || 0,
         note: asset.note || "",
         custodianId: asset.custodianId?.toString() || "",
+        canton: asset.geoLocation?.canton || "",
+        parroquia: asset.geoLocation?.parroquia || "",
       });
-      if (asset.coordinates) {
-        const [lat, lng] = asset.coordinates.split(",").map(Number);
-        if (!isNaN(lat) && !isNaN(lng)) setCoordinates({ lat, lng });
+      if (asset.geoLocation?.lat != null && asset.geoLocation?.lng != null) {
+        setCoordinates({ lat: asset.geoLocation.lat, lng: asset.geoLocation.lng });
       }
     } catch (error) {
       console.error("Error loading asset:", error);
@@ -89,16 +136,51 @@ export function AssetForm({ assetId }: AssetFormProps) {
     }
   }
 
+  async function resolveLocationId(): Promise<number | null> {
+    const { canton, parroquia } = formData;
+    if (!canton && !parroquia && !coordinates) return null;
+
+    const existing = locations.find(
+      (l) => l.canton === canton && l.parroquia === parroquia
+    );
+    if (existing) return existing.id;
+
+    try {
+      const created = await api.locations.create({
+        canton,
+        parroquia,
+        lat: coordinates?.lat ?? undefined,
+        lng: coordinates?.lng ?? undefined,
+      });
+      setLocations((prev) => [...prev, created]);
+      return created.id;
+    } catch {
+      // Si el API de ubicaciones no está disponible, guardar sin ubicación geográfica
+      return null;
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
+      const locationId = await resolveLocationId();
+      const nullStr = (v: string) => v.trim() || null;
       const data = {
-        ...formData,
+        code: nullStr(formData.code),
+        previousCode: nullStr(formData.previousCode),
+        assetName: formData.assetName,
+        brand: nullStr(formData.brand),
+        model: nullStr(formData.model),
+        serialNumber: nullStr(formData.serialNumber),
+        location: nullStr(formData.location),
+        physicalLocation: nullStr(formData.physicalLocation),
+        accountCode: nullStr(formData.accountCode),
+        note: nullStr(formData.note),
         custodianId: formData.custodianId ? parseInt(formData.custodianId) : null,
-        initialValue: parseFloat(formData.initialValue.toString()),
-        currentValue: parseFloat(formData.currentValue.toString()),
-        coordinates: coordinates ? `${coordinates.lat},${coordinates.lng}` : null,
+        locationId,
+        initialValue: formData.initialValue || null,
+        currentValue: formData.currentValue || null,
       };
       if (isEdit) {
         await api.assets.update(assetId!, data);
@@ -107,14 +189,16 @@ export function AssetForm({ assetId }: AssetFormProps) {
       }
       router.push("/admin/assets");
       router.refresh();
-    } catch (error) {
-      alert("Error al guardar activo");
+    } catch (error: any) {
+      alert(error?.message || "Error al guardar activo");
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) return <div>Cargando...</div>;
+
+  const parroquias = formData.canton ? (MORONA_SANTIAGO[formData.canton] ?? []) : [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -129,125 +213,175 @@ export function AssetForm({ assetId }: AssetFormProps) {
         </h1>
       </div>
 
-      <Card>
-        
-        <CardHeader>
-          <CardTitle>Información del Activo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Ubicación Geográfica */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ubicación Geográfica — Morona Santiago</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="grid gap-2">
-              <Label>Coordenadas de Ubicación</Label>
-              <LocationPicker value={coordinates} onChange={setCoordinates} />
-              {coordinates && (
-                <input type="hidden" name="coordinates" value={`${coordinates.lat},${coordinates.lng}`} />
-              )}
-        </div>
+                <Label>Coordenadas de Ubicación</Label>
+                <LocationPicker value={coordinates} onChange={setCoordinates} />
+                {coordinates && (
+                  <input type="hidden" name="coordinates" value={`${coordinates.lat},${coordinates.lng}`} />
+                )}
+              </div>
             <div className="grid md:grid-cols-2 gap-4">
+              
               <div className="grid gap-2">
-                <Label htmlFor="assetName">Nombre del Activo</Label>
-                <Input
-                  id="assetName"
-                  value={formData.assetName}
-                  onChange={(e) => setFormData({ ...formData, assetName: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="code">Código de Activo</Label>
-                <Input
-                  id="code"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="brand">Marca</Label>
-                <Input
-                  id="brand"
-                  value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="model">Modelo</Label>
-                <Input
-                  id="model"
-                  value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="serialNumber">Número de Serie</Label>
-                <Input
-                  id="serialNumber"
-                  value={formData.serialNumber}
-                  onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="location">Ubicación</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="custodianId">Custodio Responsable</Label>
+                <Label htmlFor="canton">Cantón</Label>
                 <select
-                  id="custodianId"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.custodianId}
-                  onChange={(e) => setFormData({ ...formData, custodianId: e.target.value })}
+                  id="canton"
+                  className={SELECT_CLASS}
+                  value={formData.canton}
+                  onChange={(e) =>
+                    setFormData({ ...formData, canton: e.target.value, parroquia: "" })
+                  }
                 >
-                  <option value="">Seleccionar Custodio</option>
-                  {custodians.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.fullName} ({c.identifier})
-                    </option>
+                  <option value="">Seleccionar cantón</option>
+                  {Object.keys(MORONA_SANTIAGO).map((c) => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="initialValue">Valor Inicial</Label>
-                <Input
-                  id="initialValue"
-                  type="number"
-                  step="0.01"
-                  value={formData.initialValue}
-                  onChange={(e) => setFormData({ ...formData, initialValue: parseFloat(e.target.value) })}
-                />
+                <Label htmlFor="parroquia">Parroquia</Label>
+                <select
+                  id="parroquia"
+                  className={SELECT_CLASS}
+                  value={formData.parroquia}
+                  onChange={(e) =>
+                    setFormData({ ...formData, parroquia: e.target.value })
+                  }
+                  disabled={!formData.canton}
+                >
+                  <option value="">
+                    {formData.canton ? "Seleccionar parroquia" : "Seleccione un cantón primero"}
+                  </option>
+                  {parroquias.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Información del Activo */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Información del Activo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="assetName">Nombre del Activo</Label>
+                  <Input
+                    id="assetName"
+                    value={formData.assetName}
+                    onChange={(e) => setFormData({ ...formData, assetName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="code">Código de Activo</Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="brand">Marca</Label>
+                  <Input
+                    id="brand"
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="model">Modelo</Label>
+                  <Input
+                    id="model"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="serialNumber">Número de Serie</Label>
+                  <Input
+                    id="serialNumber"
+                    value={formData.serialNumber}
+                    onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="location">Ubicación</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="custodianId">Custodio Responsable</Label>
+                  <select
+                    id="custodianId"
+                    className={SELECT_CLASS}
+                    value={formData.custodianId}
+                    onChange={(e) => setFormData({ ...formData, custodianId: e.target.value })}
+                  >
+                    <option value="">Seleccionar Custodio</option>
+                    {custodians.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.fullName} ({c.identifier})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="initialValue">Valor Inicial</Label>
+                  <Input
+                    id="initialValue"
+                    type="number"
+                    step="0.01"
+                    value={formData.initialValue}
+                    onChange={(e) => setFormData({ ...formData, initialValue: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="currentValue">Valor Actual</Label>
+                  <Input
+                    id="currentValue"
+                    type="number"
+                    step="0.01"
+                    value={formData.currentValue}
+                    onChange={(e) => setFormData({ ...formData, currentValue: parseFloat(e.target.value) })}
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="currentValue">Valor Actual</Label>
-                <Input
-                  id="currentValue"
-                  type="number"
-                  step="0.01"
-                  value={formData.currentValue}
-                  onChange={(e) => setFormData({ ...formData, currentValue: parseFloat(e.target.value) })}
+                <Label htmlFor="note">Notas / Observaciones</Label>
+                <textarea
+                  id="note"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="note">Notas / Observaciones</Label>
-              <textarea
-                id="note"
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-              />
-            </div>
-            
+          </CardContent>
+        </Card>
 
-            <Button type="submit" className="w-full" disabled={saving}>
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? "Guardando..." : "Guardar Activo"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <Button type="submit" className="w-full" disabled={saving}>
+          <Save className="w-4 h-4 mr-2" />
+          {saving ? "Guardando..." : "Guardar Activo"}
+        </Button>
+
+      </form>
     </div>
   );
 }

@@ -24,6 +24,16 @@ export interface Custodian {
   assets?: Asset[];
 }
 
+export interface Location {
+  id: number;
+  canton?: string | null;
+  parroquia?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Asset {
   id: number;
   code?: string | null;
@@ -40,7 +50,8 @@ export interface Asset {
   initialValue?: number | null;
   currentValue?: number | null;
   note?: string | null;
-  coordinates?: string | null;
+  locationId?: number | null;
+  geoLocation?: Location | null;
   custodianId?: number | null;
   custodian?: Custodian | null;
   createdByUserId?: number | null;

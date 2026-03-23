@@ -59,6 +59,7 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
 export const api = {
   auth: {
     login: (credentials: any) => fetcher<any>("/auth/login", { method: "POST", body: JSON.stringify(credentials) }),
+    me: () => fetcher<any>("/auth/me"),
   },
   users: {
     getAll: () => fetcher<any[]>("/users"),
@@ -73,6 +74,10 @@ export const api = {
     create: (data: any) => fetcher<any>("/custodians", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: any) => fetcher<any>(`/custodians/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetcher<void>(`/custodians/${id}`, { method: "DELETE" }),
+  },
+  locations: {
+    getAll: () => fetcher<any[]>("/locations"),
+    create: (data: any) => fetcher<any>("/locations", { method: "POST", body: JSON.stringify(data) }),
   },
   assets: {
     getAll: () => fetcher<any[]>("/assets"),

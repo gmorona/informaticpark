@@ -21,6 +21,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
     // Dynamic import to avoid SSR issues
     import("leaflet").then((L) => {
+      // Guard against container already initialized (React Strict Mode / HMR)
+      if ((mapRef.current as any)._leaflet_id) return;
       // Fix default icon paths broken by webpack
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -72,6 +74,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
         markerRef.current = null;
+      }
+      if (mapRef.current) {
+        delete (mapRef.current as any)._leaflet_id;
       }
     };
   }, []);

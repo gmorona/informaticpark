@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -19,11 +20,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    api.auth.me()
+      .then((userData) => {
+        localStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = (token: string, userData: User) => {
