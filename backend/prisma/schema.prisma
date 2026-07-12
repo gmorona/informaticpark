@@ -1,15 +1,21 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
   ADMIN
   USER
+}
+
+enum MovementStatus {
+  PENDIENTE
+  COMPLETADO
+  RECHAZADO
 }
 
 model User {
@@ -22,7 +28,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assetsCreated Asset[]
+  custodianId Int?       @unique
+  custodian   Custodian? @relation(fields: [custodianId], references: [id], onDelete: SetNull)
+
+  assetsCreated          Asset[]
+  movimientosRegistrados AssetMovement[] @relation("MovimientosRegistrados")
+  movimientosConfirmados AssetMovement[] @relation("MovimientosConfirmados")
 }
 
 model Location {
@@ -36,6 +47,9 @@ model Location {
 
   assets     Asset[]
   custodians Custodian[]
+
+  movimientosComoOrigen  AssetMovement[] @relation("MovimientosDesdeUbicacion")
+  movimientosComoDestino AssetMovement[] @relation("MovimientosHaciaUbicacion")
 }
 
 model Custodian {
@@ -49,7 +63,12 @@ model Custodian {
   locationId Int?
   geoLocation Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
-  assets     Asset[]
+  assets Asset[]
+
+  movimientosComoOrigen  AssetMovement[] @relation("MovimientosDesde")
+  movimientosComoDestino AssetMovement[] @relation("MovimientosHacia")
+
+  userAccount User?
 }
 
 model Asset {
@@ -80,5 +99,39 @@ model Asset {
 
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
+
+  movements        AssetMovement[]
+}
+
+model AssetMovement {
+  id           Int            @id @default(autoincrement())
+  transferDate DateTime       @default(now())
+  note         String?
+  actaUrl      String?
+  status       MovementStatus @default(PENDIENTE)
+  confirmedAt  DateTime?
+  actaRecepcionUrl String?
+  createdAt    DateTime       @default(now())
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  fromCustodianId Int?
+  fromCustodian   Custodian? @relation("MovimientosDesde", fields: [fromCustodianId], references: [id], onDelete: SetNull)
+
+  toCustodianId Int?
+  toCustodian   Custodian? @relation("MovimientosHacia", fields: [toCustodianId], references: [id], onDelete: SetNull)
+
+  fromLocationId Int?
+  fromLocation   Location? @relation("MovimientosDesdeUbicacion", fields: [fromLocationId], references: [id], onDelete: SetNull)
+
+  toLocationId Int?
+  toLocation   Location? @relation("MovimientosHaciaUbicacion", fields: [toLocationId], references: [id], onDelete: SetNull)
+
+  registeredByUserId Int?
+  registeredBy       User? @relation("MovimientosRegistrados", fields: [registeredByUserId], references: [id], onDelete: SetNull)
+
+  confirmedByUserId Int?
+  confirmedBy       User? @relation("MovimientosConfirmados", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
 }
 

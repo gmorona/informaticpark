@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, History, Save } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
@@ -211,6 +211,14 @@ export function AssetForm({ assetId }: AssetFormProps) {
         <h1 className="text-3xl font-bold">
           {isEdit ? "Editar Activo" : "Nuevo Activo"}
         </h1>
+        {isEdit && (
+          <Link href={`/admin/assets/${assetId}/historial`} className="ml-auto">
+            <Button variant="outline">
+              <History className="w-4 h-4 mr-2" />
+              Historial de Traspasos
+            </Button>
+          </Link>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

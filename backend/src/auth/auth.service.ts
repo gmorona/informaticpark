@@ -24,6 +24,20 @@ export class AuthService {
     return user;
   }
 
+  async getMe(userId: number) {
+    const user = await this.usersService.findById(userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Sesión inválida');
+    }
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      custodianId: user.custodianId ?? null,
+    };
+  }
+
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
 
@@ -31,6 +45,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      custodianId: user.custodianId ?? null,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -42,6 +57,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
+        custodianId: user.custodianId ?? null,
       },
     };
   }

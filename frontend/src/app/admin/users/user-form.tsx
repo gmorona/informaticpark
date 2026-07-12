@@ -3,13 +3,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Role, User } from "@/lib/types";
+import { Custodian, Role } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 interface UserFormProps {
   userId?: number;
@@ -18,52 +21,68 @@ interface UserFormProps {
 export function UserForm({ userId }: UserFormProps) {
   const router = useRouter();
   const isEdit = !!userId;
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     role: Role.USER,
     isActive: true,
+    custodianId: "" as string,
   });
 
   useEffect(() => {
-    if (isEdit) {
-      loadUser();
+    async function load() {
+      try {
+        const [custodiansData, userData] = await Promise.all([
+          api.custodians.getAll(),
+          isEdit ? api.users.getById(userId!) : Promise.resolve(null),
+        ]);
+        setCustodians(custodiansData);
+        if (userData) {
+          setFormData({
+            name: userData.name,
+            email: userData.email,
+            password: "",
+            role: userData.role,
+            isActive: userData.isActive,
+            custodianId: userData.custodianId ? String(userData.custodianId) : "",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
     }
+    load();
   }, [userId]);
-
-  async function loadUser() {
-    try {
-      const user = await api.users.getById(userId!);
-      setFormData({
-        name: user.name,
-        email: user.email,
-        password: "", // Don't load password
-        role: user.role,
-        isActive: user.isActive,
-      });
-    } catch (error) {
-      console.error("Error loading user:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload: any = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        isActive: formData.isActive,
+        custodianId: formData.custodianId ? Number(formData.custodianId) : null,
+      };
+      if (formData.password) payload.password = formData.password;
+
       if (isEdit) {
-        await api.users.update(userId!, formData);
+        await api.users.update(userId!, payload);
       } else {
-        await api.users.create(formData);
+        if (!formData.password) { alert("La contraseña es requerida"); return; }
+        await api.users.create({ ...payload, password: formData.password });
       }
       router.push("/admin/users");
       router.refresh();
-    } catch (error) {
-      alert("Error al guardar usuario");
+    } catch (error: any) {
+      alert(error?.message || "Error al guardar usuario");
     } finally {
       setSaving(false);
     }
@@ -125,14 +144,38 @@ export function UserForm({ userId }: UserFormProps) {
               <Label htmlFor="role">Rol</Label>
               <select
                 id="role"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className={SELECT_CLASS}
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                onChange={(e) =>
+                  setFormData({ ...formData, role: e.target.value as Role, custodianId: "" })
+                }
               >
-                <option value={Role.USER}>Usuario</option>
+                <option value={Role.USER}>Usuario (Custodio)</option>
                 <option value={Role.ADMIN}>Administrador</option>
               </select>
             </div>
+            {formData.role === Role.USER && (
+              <div className="grid gap-2">
+                <Label htmlFor="custodianId">Custodio vinculado</Label>
+                <select
+                  id="custodianId"
+                  className={SELECT_CLASS}
+                  value={formData.custodianId}
+                  onChange={(e) => setFormData({ ...formData, custodianId: e.target.value })}
+                >
+                  <option value="">Sin custodio vinculado</option>
+                  {custodians.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.fullName} — {c.identifier}
+                      {c.unit ? ` (${c.unit})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Vincula este usuario a un custodio para que pueda registrar traspasos de sus activos.
+                </p>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <input
                 id="isActive"

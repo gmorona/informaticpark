@@ -1,8 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { TrimStringsPipe } from '../common/pipes/trim-strings.pipe';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -15,5 +16,14 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   login(@Body(TrimStringsPipe) dto: LoginDto) {
     return this.authService.login(dto.email, dto.password);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Validar sesión y obtener usuario actual' })
+  @ApiResponse({ status: 200, description: 'Datos del usuario autenticado' })
+  @ApiResponse({ status: 401, description: 'Token inválido o expirado' })
+  me(@Request() req: any) {
+    return this.authService.getMe(req.user.sub);
   }
 }

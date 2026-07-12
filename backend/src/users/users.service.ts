@@ -12,12 +12,17 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
+  findById(id: number) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
   async createUserAsAdmin(data: {
     name: string;
     email: string;
     password: string;
     role?: AppRole;
     isActive?: boolean;
+    custodianId?: number;
   }) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
@@ -28,6 +33,7 @@ export class UsersService {
         password: hashedPassword,
         role: (data.role || 'USER') as any,
         isActive: data.isActive ?? true,
+        ...(data.custodianId !== undefined ? { custodianId: data.custodianId } : {}),
       },
     });
   }
@@ -39,12 +45,14 @@ export class UsersService {
       email?: string;
       password?: string;
       role?: AppRole;
+      custodianId?: number | null;
     },
   ) {
     const updateData: any = {
       ...(data.name !== undefined ? { name: data.name } : {}),
       ...(data.email !== undefined ? { email: data.email } : {}),
       ...(data.role !== undefined ? { role: data.role } : {}),
+      ...('custodianId' in data ? { custodianId: data.custodianId ?? null } : {}),
     };
 
     if (data.password !== undefined) {

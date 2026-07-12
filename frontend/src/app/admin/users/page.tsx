@@ -12,9 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Plus, Pencil, Trash2, UserPlus, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function UsersAdminPage() {
@@ -22,51 +23,40 @@ export default function UsersAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  useEffect(() => { loadUsers(); }, []);
 
   async function loadUsers() {
     setLoading(true);
     setError(null);
     try {
       const data = await api.users.getAll();
-      if (Array.isArray(data)) {
-        setUsers(data);
-      } else {
-        console.error("Data received is not an array:", data);
-        setUsers([]);
-      }
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error("Error loading users:", err);
-      setError(err.message || "Error al cargar usuarios. Verifica que el servidor esté encendido.");
+      setError(err.message || "Error al cargar usuarios.");
     } finally {
       setLoading(false);
     }
   }
 
-
-
   async function handleDelete(id: number) {
-    if (confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
-      try {
-        await api.users.delete(id);
-        loadUsers();
-      } catch (error) {
-        alert("Error al eliminar usuario");
-      }
+    if (!confirm("¿Eliminar este usuario?")) return;
+    try {
+      await api.users.delete(id);
+      loadUsers();
+    } catch {
+      alert("Error al eliminar usuario");
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Administración de Usuarios</h1>
-          <p className="text-muted-foreground text-sm">Gestiona los accesos y roles del sistema.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Usuarios</h1>
+          <p className="text-muted-foreground text-sm mt-1">Gestiona los accesos y roles del sistema.</p>
         </div>
         <Link href="/admin/users/new">
-          <Button>
+          <Button className="cursor-pointer shrink-0">
             <UserPlus className="w-4 h-4 mr-2" />
             Nuevo Usuario
           </Button>
@@ -74,10 +64,10 @@ export default function UsersAdminPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 p-0 overflow-hidden rounded-lg">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/40">
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
@@ -87,24 +77,44 @@ export default function UsersAdminPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">Cargando...</TableCell>
-                </TableRow>
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-44" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-destructive">
-                    {error}
+                  <TableCell colSpan={5} className="py-12">
+                    <div className="flex flex-col items-center gap-2 text-destructive">
+                      <AlertCircle className="w-8 h-8" />
+                      <p className="text-sm font-medium">Error al cargar datos</p>
+                      <p className="text-xs text-muted-foreground">{error}</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">No hay usuarios registrados.</TableCell>
+                  <TableCell colSpan={5} className="py-12">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Users className="w-8 h-8" />
+                      <p className="text-sm font-medium">No hay usuarios registrados</p>
+                      <Link href="/admin/users/new">
+                        <Button size="sm" variant="outline" className="mt-1 cursor-pointer">
+                          <Plus className="w-3 h-3 mr-1" /> Agregar usuario
+                        </Button>
+                      </Link>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} className="hover:bg-muted/40 transition-colors">
                     <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === Role.ADMIN ? "default" : "secondary"}>
                         {user.role}
@@ -115,15 +125,22 @@ export default function UsersAdminPage() {
                         {user.isActive ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Link href={`/admin/users/${user.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Pencil className="w-4 h-4" />
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={`/admin/users/${user.id}`}>
+                          <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer h-8 w-8 hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(user.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
-                      </Link>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

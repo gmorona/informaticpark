@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { LocationsService } from './locations.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CreateLocationDto } from './dto/create-location.dto';
@@ -44,14 +45,16 @@ export class LocationsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar ubicaciones (solo ADMIN)' })
+  @Public()
+  @ApiOperation({ summary: 'Listar ubicaciones' })
   @ApiResponse({ status: 200, description: 'Lista de ubicaciones' })
   async findAll() {
     return this.locationsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener ubicación por ID (solo ADMIN)' })
+  @Public()
+  @ApiOperation({ summary: 'Obtener ubicación por ID' })
   @ApiParam({ name: 'id', description: 'ID de la ubicación' })
   @ApiResponse({ status: 200, description: 'Ubicación encontrada' })
   @ApiResponse({ status: 404, description: 'Ubicación no encontrada' })

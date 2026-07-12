@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { CustodiansService } from './custodians.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateCustodianDto } from './dto/create-custodian.dto';
@@ -45,20 +46,18 @@ export class CustodiansController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar custodios (solo ADMIN)' })
+  @Public()
+  @ApiOperation({ summary: 'Listar custodios' })
   @ApiResponse({ status: 200, description: 'Lista de custodios' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Solo ADMIN' })
   async findAll() {
     return this.custodiansService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener custodio por ID (solo ADMIN)' })
+  @Public()
+  @ApiOperation({ summary: 'Obtener custodio por ID' })
   @ApiParam({ name: 'id', description: 'ID del custodio' })
   @ApiResponse({ status: 200, description: 'Custodio encontrado' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Solo ADMIN' })
   @ApiResponse({ status: 404, description: 'Custodio no encontrado' })
   async findOne(@Param('id', ParseIdPipe) id: number) {
     return this.custodiansService.findOne(id);

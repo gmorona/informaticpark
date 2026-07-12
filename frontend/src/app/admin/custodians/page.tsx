@@ -12,8 +12,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Pencil, Trash2, Plus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Building2, Pencil, Trash2, Plus, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -23,51 +24,40 @@ export default function CustodiansAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadCustodians();
-  }, []);
+  useEffect(() => { loadCustodians(); }, []);
 
   async function loadCustodians() {
     setLoading(true);
     setError(null);
     try {
       const data = await api.custodians.getAll();
-      if (Array.isArray(data)) {
-        setCustodians(data);
-      } else {
-        console.error("Data received is not an array:", data);
-        setCustodians([]);
-      }
+      setCustodians(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error("Error loading custodians:", err);
-      setError(err.message || "Error al cargar custodios. Verifica que el servidor esté encendido.");
+      setError(err.message || "Error al cargar custodios.");
     } finally {
       setLoading(false);
     }
   }
 
-
-
   async function handleDelete(id: number) {
-    if (confirm("¿Estás seguro de que deseas eliminar este custodio?")) {
-      try {
-        await api.custodians.delete(id);
-        loadCustodians();
-      } catch (error) {
-        alert("Error al eliminar custodio");
-      }
+    if (!confirm("¿Eliminar este custodio?")) return;
+    try {
+      await api.custodians.delete(id);
+      loadCustodians();
+    } catch {
+      alert("Error al eliminar custodio");
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Administración de Custodios</h1>
-          <p className="text-muted-foreground text-sm">Gestiona los responsables de los activos.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Custodios</h1>
+          <p className="text-muted-foreground text-sm mt-1">Responsables de los activos asignados.</p>
         </div>
         <Link href="/admin/custodians/new">
-          <Button>
+          <Button className="cursor-pointer shrink-0">
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Custodio
           </Button>
@@ -75,10 +65,10 @@ export default function CustodiansAdminPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 p-0 overflow-hidden rounded-lg">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/40">
                 <TableHead>Nombre Completo</TableHead>
                 <TableHead>Identificador</TableHead>
                 <TableHead>Unidad</TableHead>
@@ -87,38 +77,64 @@ export default function CustodiansAdminPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">Cargando...</TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-destructive">
-                    {error}
+                  <TableCell colSpan={4} className="py-12">
+                    <div className="flex flex-col items-center gap-2 text-destructive">
+                      <AlertCircle className="w-8 h-8" />
+                      <p className="text-sm font-medium">Error al cargar datos</p>
+                      <p className="text-xs text-muted-foreground">{error}</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : custodians.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">No hay custodios registrados.</TableCell>
+                  <TableCell colSpan={4} className="py-12">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Building2 className="w-8 h-8" />
+                      <p className="text-sm font-medium">No hay custodios registrados</p>
+                      <Link href="/admin/custodians/new">
+                        <Button size="sm" variant="outline" className="mt-1 cursor-pointer">
+                          <Plus className="w-3 h-3 mr-1" /> Agregar custodio
+                        </Button>
+                      </Link>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 custodians.map((c) => (
                   <TableRow
                     key={c.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/40 transition-colors"
                     onClick={() => router.push(`/admin/custodians/${c.id}/assets`)}
                   >
                     <TableCell className="font-medium">{c.fullName}</TableCell>
-                    <TableCell>{c.identifier}</TableCell>
-                    <TableCell>{c.unit || "N/A"}</TableCell>
-                    <TableCell className="text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <Link href={`/admin/custodians/${c.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Pencil className="w-4 h-4" />
+                    <TableCell className="font-mono text-xs text-muted-foreground">{c.identifier}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.unit || "—"}</TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={`/admin/custodians/${c.id}`}>
+                          <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer h-8 w-8 hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(c.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
-                      </Link>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -43,7 +43,12 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined" && !url.includes("/auth/login")) {
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      !url.includes("/auth/login") &&
+      !window.location.pathname.startsWith("/public")
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
@@ -55,6 +60,25 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
+
+async function fetcherMultipart<T>(endpoint: string, body: FormData, method = 'POST'): Promise<T> {
+  let token = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token');
+  }
+  const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const response = await fetch(url, {
+    method,
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body,
+    mode: 'cors',
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Ocurrió un error' }));
+    throw new Error(error.message || `Error ${response.status}`);
+  }
+  return response.json();
+}
 
 export const api = {
   auth: {
@@ -77,7 +101,10 @@ export const api = {
   },
   locations: {
     getAll: () => fetcher<any[]>("/locations"),
+    getById: (id: number) => fetcher<any>(`/locations/${id}`),
     create: (data: any) => fetcher<any>("/locations", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: any) => fetcher<any>(`/locations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: number) => fetcher<void>(`/locations/${id}`, { method: "DELETE" }),
   },
   assets: {
     getAll: () => fetcher<any[]>("/assets"),
@@ -85,6 +112,16 @@ export const api = {
     create: (data: any) => fetcher<any>("/assets", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: any) => fetcher<any>(`/assets/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: number) => fetcher<void>(`/assets/${id}`, { method: "DELETE" }),
+  },
+  movements: {
+    getByAsset: (assetId: number) => fetcher<any[]>(`/assets/${assetId}/movements`),
+    getPendingForMe: () => fetcher<any[]>(`/movements/pending`),
+    create: (assetId: number, formData: FormData) =>
+      fetcherMultipart<any>(`/assets/${assetId}/movements`, formData),
+    confirm: (assetId: number, movementId: number, formData: FormData) =>
+      fetcherMultipart<any>(`/assets/${assetId}/movements/${movementId}/confirm`, formData, 'PATCH'),
+    reject: (assetId: number, movementId: number) =>
+      fetcher<any>(`/assets/${assetId}/movements/${movementId}/reject`, { method: "PATCH" }),
   },
 };
 

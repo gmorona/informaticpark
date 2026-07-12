@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, LayoutDashboard, Clock } from "lucide-react";
+import { LogOut, User as UserIcon, LayoutDashboard, Clock, Package, Users, Building2, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 function getTokenExpiry(): number | null {
   try {
@@ -24,25 +26,32 @@ function formatCountdown(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+const adminLinks = [
+  { href: "/admin/users", label: "Usuarios", icon: Users },
+  { href: "/admin/custodians", label: "Custodios", icon: Building2 },
+  { href: "/admin/assets", label: "Activos", icon: Package },
+  { href: "/admin/locations", label: "Ubicaciones", icon: MapPin },
+];
+
+const custodianLinks = [
+  { href: "/admin/assets", label: "Activos", icon: Package },
+];
+
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const navLinks = user?.role === "ADMIN" ? adminLinks : custodianLinks;
   const [remaining, setRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
-
     const expiry = getTokenExpiry();
     if (!expiry) return;
-
     const tick = () => {
       const secs = expiry - Math.floor(Date.now() / 1000);
-      if (secs <= 0) {
-        logout();
-      } else {
-        setRemaining(secs);
-      }
+      if (secs <= 0) logout();
+      else setRemaining(secs);
     };
-
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
@@ -53,27 +62,58 @@ export default function Navbar() {
   const isExpiringSoon = remaining !== null && remaining <= 300;
 
   return (
-    <nav className="border-b bg-card">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-          <LayoutDashboard className="w-6 h-6 text-primary" />
-          <span>Parque Informatico</span>
-        </Link>
+    <nav className="border-b bg-card sticky top-0 z-50 shadow-sm">
+      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center gap-2 font-bold text-base shrink-0">
+            <LayoutDashboard className="w-5 h-5 text-primary" />
+            <span className="hidden sm:block">Parque Informático</span>
+          </Link>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mr-4">
-            <UserIcon className="w-4 h-4" />
-            <span>{user.name} ({user.role})</span>
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
+                  pathname.startsWith(href)
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <UserIcon className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:block">{user.name}</span>
+            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold">
+              {user.role}
+            </span>
             {remaining !== null && (
-              <span className={`flex items-center gap-1 ml-2 font-mono ${isExpiringSoon ? "text-destructive" : "text-muted-foreground"}`}>
+              <span className={cn(
+                "hidden sm:flex items-center gap-1 font-mono text-xs",
+                isExpiringSoon ? "text-destructive font-semibold" : "text-muted-foreground"
+              )}>
                 <Clock className="w-3 h-3" />
                 {formatCountdown(remaining)}
               </span>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={logout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar Sesión
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={logout}
+            className="text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:ml-1.5 sm:block">Salir</span>
           </Button>
         </div>
       </div>

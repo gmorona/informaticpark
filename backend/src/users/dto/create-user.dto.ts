@@ -5,10 +5,11 @@ import {
   IsOptional,
   IsEnum,
   IsBoolean,
+  IsInt,
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'Juan Pérez' })
@@ -44,4 +45,10 @@ export class CreateUserDto {
   })
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'ID del custodio vinculado (solo rol USER)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  custodianId?: number;
 }

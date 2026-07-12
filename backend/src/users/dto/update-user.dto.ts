@@ -4,10 +4,11 @@ import {
   IsEmail,
   IsOptional,
   IsEnum,
+  IsInt,
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
@@ -36,4 +37,10 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(['ADMIN', 'USER'])
   role?: 'ADMIN' | 'USER';
+
+  @ApiPropertyOptional({ description: 'ID del custodio vinculado (null para desvincular)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  custodianId?: number | null;
 }

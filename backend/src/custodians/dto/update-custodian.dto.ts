@@ -2,9 +2,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
+  IsInt,
   MaxLength,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateCustodianDto {
   @ApiPropertyOptional()
@@ -27,4 +28,10 @@ export class UpdateCustodianDto {
   @MaxLength(255)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   unit?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  locationId?: number;
 }

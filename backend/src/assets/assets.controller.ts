@@ -21,6 +21,7 @@ import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { TrimStringsPipe } from '../common/pipes/trim-strings.pipe';
 
@@ -45,18 +46,18 @@ export class AssetsController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Listar activos' })
   @ApiResponse({ status: 200, description: 'Lista de activos' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
   findAll() {
     return this.assetsService.findAll();
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Obtener activo por ID' })
   @ApiParam({ name: 'id', description: 'ID del activo' })
   @ApiResponse({ status: 200, description: 'Activo encontrado' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 404, description: 'Activo no encontrado' })
   findOne(@Param('id', ParseIdPipe) id: number) {
     return this.assetsService.findOne(id);

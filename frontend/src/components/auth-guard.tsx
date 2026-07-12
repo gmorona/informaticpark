@@ -4,16 +4,26 @@ import { useAuth } from "@/components/auth-provider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
+const ADMIN_ONLY_PATHS = ["/admin/users", "/admin/custodians", "/admin/locations"];
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
+  const isPublicPath = pathname === "/login" || pathname.startsWith("/public");
+  const isAdminOnlyPath = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
+
   useEffect(() => {
-    if (!loading && !user && pathname !== "/login") {
+    if (loading) return;
+    if (!user && !isPublicPath) {
       router.push("/login");
+      return;
     }
-  }, [user, loading, router, pathname]);
+    if (user && user.role !== "ADMIN" && isAdminOnlyPath) {
+      router.push("/admin/assets");
+    }
+  }, [user, loading, router, isPublicPath, isAdminOnlyPath]);
 
   if (loading) {
     return (
@@ -23,7 +33,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (pathname === "/login") {
+  if (isPublicPath) {
     return <>{children}</>;
   }
 
