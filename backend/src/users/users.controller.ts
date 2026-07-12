@@ -47,6 +47,21 @@ export class UsersController {
     });
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener usuario por ID (solo ADMIN)' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Usuario encontrado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async findOne(@Param('id', ParseIdPipe) id: number) {
+    const user = await this.usersService.findById(id);
+    if (!user) {
+      return null;
+    }
+    const safe = { ...(user as any) };
+    delete (safe as any).password;
+    return safe;
+  }
+
   @Post()
   @ApiOperation({ summary: 'Crear usuario (solo ADMIN)' })
   @ApiResponse({ status: 201, description: 'Usuario creado' })
